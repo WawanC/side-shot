@@ -192,7 +192,7 @@ const App = () => {
   return (
     <main className="flex flex-col items-center h-screen">
       <h1 className="text-4xl font-bold bg-pink-500 w-full p-4 text-center">
-        Shuffle Game
+        Side-Shot
       </h1>
       <section
         className="flex flex-col h-[50vh] justify-between items-center 

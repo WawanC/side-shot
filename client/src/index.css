@@ -1,3 +1,9 @@
+@import url("https://fonts.cdnfonts.com/css/cartoonist-hand");
+
+* {
+  font-family: "SF Cartoonist Hand SC", sans-serif;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

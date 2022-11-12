@@ -16,6 +16,13 @@ const HomePage = () => {
       >
         Play
       </button>
+      <button
+        className="bg-pink-500 py-4 px-8 rounded-full 
+      font-bold text-4xl hover:bg-white"
+        onClick={() => navigate("/lobby")}
+      >
+        Multiplayer
+      </button>
     </main>
   );
 };

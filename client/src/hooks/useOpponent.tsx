@@ -8,7 +8,7 @@ import {
   getSingleCard
 } from "../utils/opponent-ai";
 
-const useOpponent = () => {
+const useOpponent = (name: string) => {
   const [cards, setCards] = useState<Card[]>([]);
 
   // Opponent AI Move
@@ -71,11 +71,11 @@ const useOpponent = () => {
         });
         setCards(temp);
         resolve(opponentSelectedCards);
-      }, 1000);
+      }, 2000);
     });
   };
 
-  return { cards, setCards, move };
+  return { name, cards, setCards, move };
 };
 
 export default useOpponent;

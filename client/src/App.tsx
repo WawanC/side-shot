@@ -4,7 +4,6 @@ import useOpponent from "./hooks/useOpponent";
 import usePlayer from "./hooks/usePlayer";
 import Card from "./interfaces/card";
 import GameState from "./interfaces/game-state";
-import Turn from "./interfaces/turn";
 import cardsData from "./utils/card-data";
 import {
   compareFullHouse,
@@ -13,6 +12,7 @@ import {
   isSameLength,
   isStraightCombo
 } from "./utils/check-card";
+import { getTurnName } from "./utils/get-turn";
 import shuffleCards from "./utils/shuffle-card";
 
 const getStatusText = (state: "PLAYER_WIN" | "OPPONENT_WIN") => {
@@ -42,12 +42,26 @@ const getStatusText = (state: "PLAYER_WIN" | "OPPONENT_WIN") => {
 // ];
 
 const App = () => {
-  const player = usePlayer();
-  const opponent = useOpponent();
+  const player = usePlayer("Player");
+
+  const opponentA = useOpponent("Opponent A");
+  const opponentB = useOpponent("Opponent B");
+  const opponentC = useOpponent("Opponent C");
+
   const [middleCards, setMiddleCards] = useState<Card[]>([]);
-  const [turn, setTurn] = useState<Turn>();
+  const [turn, setTurn] = useState<number>(1);
   const [gameState, setGameState] = useState<GameState>();
   const [canSet, setCanSet] = useState<boolean>(false);
+  const [contestCount, setContestCount] = useState<number>(0);
+  const [contestHolder, setContestHolder] = useState<number | null>(null);
+
+  const nextTurn = () => {
+    if (turn === 4) {
+      setTurn(1);
+    } else {
+      setTurn((turn) => turn + 1);
+    }
+  };
 
   // StartGame Method
   const startGame = useCallback(() => {
@@ -55,7 +69,9 @@ const App = () => {
     const shuffledCards = shuffleCards(cardsData);
 
     const playerCardsTemp: Card[] = [];
-    const opponentCardsTemp: Card[] = [];
+    const opponentACardsTemp: Card[] = [];
+    const opponentBCardsTemp: Card[] = [];
+    const opponentCCardsTemp: Card[] = [];
 
     let cardsLength = 13;
 
@@ -66,38 +82,53 @@ const App = () => {
 
     for (let index = 0; index < cardsLength; index++) {
       const card = shuffledCards.pop();
-      if (card) opponentCardsTemp.push(card);
+      if (card) opponentACardsTemp.push(card);
+    }
+
+    for (let index = 0; index < cardsLength; index++) {
+      const card = shuffledCards.pop();
+      if (card) opponentBCardsTemp.push(card);
+    }
+
+    for (let index = 0; index < cardsLength; index++) {
+      const card = shuffledCards.pop();
+      if (card) opponentCCardsTemp.push(card);
     }
 
     player.setCards(playerCardsTemp.sort((a, b) => a.power - b.power));
     // player.setCards(opponentCardsRigged);
-    opponent.setCards(opponentCardsTemp.sort((a, b) => a.power - b.power));
+    opponentA.setCards(opponentACardsTemp.sort((a, b) => a.power - b.power));
+    opponentB.setCards(opponentBCardsTemp.sort((a, b) => a.power - b.power));
+    opponentC.setCards(opponentCCardsTemp.sort((a, b) => a.power - b.power));
     // opponent.setCards(playerCardsRigged);
     setMiddleCards([]);
-    setTurn("PLAYER");
+    setTurn(1);
     setGameState("PLAYING");
     // Shuffle and distribute cards
   }, []);
   // StartGame Method
 
-  // Set Middle Cards
+  // Player Set Middle Cards
   const setCards = () => {
-    if (player.selectedCards.length <= 0) return;
+    if (player.selectedCards.length <= 0 || turn !== 1) return;
 
     player.setCards((cards) =>
       cards.filter((card) => !player.selectedCards.includes(card))
     );
 
     setMiddleCards(player.selectedCards);
+    setContestHolder(1);
+    setContestCount(0);
     player.setSelectedCards([]);
-    setTurn("OPPONENT");
+    nextTurn();
   };
-  // Set Middle Cards
+  // Player Set Middle Cards
 
   const passTurn = () => {
-    setMiddleCards([]);
+    // setMiddleCards([]);
     player.setSelectedCards([]);
-    setTurn("OPPONENT");
+    setContestCount((count) => count + 1);
+    nextTurn();
   };
 
   // Game Start Setup
@@ -108,14 +139,47 @@ const App = () => {
 
   // Opponent Move
   useEffect(() => {
-    if (turn === "OPPONENT" && gameState === "PLAYING") {
-      opponent.move(middleCards).then((cards) => {
-        setMiddleCards(cards);
-        setTurn("PLAYER");
-      });
-    }
+    const opponentMoving = async () => {
+      // console.log("Turn :", turn);
+      // console.log("MiddleCards :", middleCards);
+      if (gameState !== "PLAYING" || turn === 1) return;
+      let selectedCards: Card[] = [];
+      const boardsCards = contestCount >= 3 ? [] : middleCards;
+
+      if (turn === 2) {
+        selectedCards = await opponentB.move(boardsCards);
+      }
+      if (turn === 3) {
+        selectedCards = await opponentA.move(boardsCards);
+      }
+      if (turn === 4) {
+        selectedCards = await opponentC.move(boardsCards);
+      }
+
+      if (selectedCards.length === 0) {
+        setContestCount((count) => count + 1);
+      } else {
+        setContestHolder(turn);
+        setContestCount(0);
+        setMiddleCards(selectedCards);
+      }
+
+      nextTurn();
+    };
+    opponentMoving();
   }, [turn]);
   // Opponent Move
+
+  // Check Contest
+  useEffect(() => {
+    // console.log(contestCount);
+    if (contestHolder && contestCount >= 3) {
+      setMiddleCards([]);
+      setContestCount(0);
+      setTurn(contestHolder);
+    }
+  }, [contestCount]);
+  // Check Contest
 
   // Check Game State
   useEffect(() => {
@@ -123,10 +187,10 @@ const App = () => {
     if (player.cards.length === 0) {
       setGameState("PLAYER_WIN");
     }
-    if (opponent.cards.length === 0) {
+    if (opponentA.cards.length === 0) {
       setGameState("OPPONENT_WIN");
     }
-  }, [player.cards.length, opponent.cards.length]);
+  }, [player.cards.length, opponentA.cards.length]);
 
   // Check if player card is valid
   useEffect(() => {
@@ -195,21 +259,62 @@ const App = () => {
         Side-Shot
       </h1>
       <section
-        className="flex flex-col h-[50vh] justify-between items-center 
-      bg-pink-200 flex-1 w-full py-8"
+        className="flex flex-col h-[50vh] justify-center items-center 
+      bg-blue-200 flex-1 w-full relative"
       >
-        {/* Opponent Side */}
-        <div className="flex justify-center">
-          {opponent.cards.map((card) => (
-            <CardItem
-              card={card}
-              key={`${card.rank}-${card.suit}`}
-              className={`-m-4 shadow-sm shadow-black`}
-              folded={gameState !== "PLAYER_WIN"}
-            />
-          ))}
+        {/* Opponent A Side */}
+        <div className="flex flex-col absolute top-4 gap-4 items-center">
+          <p className="text-xl font-bold">Opponent A</p>
+          <div className="flex justify-center">
+            {opponentA.cards.map((card) => (
+              <CardItem
+                card={card}
+                key={`${card.rank}-${card.suit}`}
+                className={`-m-4 shadow-sm shadow-black`}
+                folded={gameState !== "PLAYER_WIN"}
+              />
+            ))}
+          </div>
         </div>
-        {/* Opponent Side */}
+        {/* Opponent A Side */}
+
+        {/* Opponent B Side */}
+        <div
+          className="flex flex-col gap-8 items-center
+          absolute top-1/2 -translate-y-1/2 left-0 -rotate-90 w-[300px]"
+        >
+          <p className="font-bold text-xl">Opponent B</p>
+          <div className="flex justify-center">
+            {opponentB.cards.map((card) => (
+              <CardItem
+                card={card}
+                key={`${card.rank}-${card.suit}`}
+                className={`-m-8 shadow-sm shadow-black`}
+                folded={gameState !== "PLAYER_WIN"}
+              />
+            ))}
+          </div>
+        </div>
+        {/* Opponent B Side */}
+
+        {/* Opponent C Side */}
+        <div
+          className="flex flex-col gap-8 items-center
+        absolute top-1/2 -translate-y-1/2 right-0 rotate-90 w-[300px]"
+        >
+          <p className="text-xl font-bold">Opponent C</p>
+          <div className="flex justify-center">
+            {opponentC.cards.map((card) => (
+              <CardItem
+                card={card}
+                key={`${card.rank}-${card.suit}`}
+                className={`-m-8 shadow-sm shadow-black`}
+                folded={gameState !== "PLAYER_WIN"}
+              />
+            ))}
+          </div>
+        </div>
+        {/* Opponent C Side */}
 
         {/* Middle Side */}
         <div className="relative flex justify-center w-1/2 h-28 items-center">
@@ -231,7 +336,7 @@ const App = () => {
         {/* Middle Side */}
 
         {/* Player Side */}
-        <div className="flex flex-col items-center gap-12">
+        <div className="flex flex-col items-center gap-12 absolute bottom-8">
           <div className="flex gap-4">
             <button
               className={`bg-pink-500 py-2 px-4 rounded-full font-bold 
@@ -244,7 +349,7 @@ const App = () => {
             <button
               className={`bg-pink-500 py-2 px-4 rounded-full font-bold 
           hover:scale-125 transition-all disabled:bg-gray-500 disabled:hover:scale-100`}
-              disabled={turn === "OPPONENT"}
+              disabled={turn !== 1}
               onClick={passTurn}
             >
               Pass
@@ -258,7 +363,7 @@ const App = () => {
                 }`}
                 card={card}
                 key={`${card.rank}-${card.suit}`}
-                onClick={() => turn === "PLAYER" && player.selectCard(card)}
+                onClick={() => turn === 1 && player.selectCard(card)}
               />
             ))}
           </div>
@@ -270,7 +375,7 @@ const App = () => {
       flex flex-col items-center"
       >
         {gameState === "PLAYING" ? (
-          <span>{turn} TURN</span>
+          <span>{getTurnName(turn)} TURN</span>
         ) : (
           <button
             className="bg-pink-500 w-fit py-2 px-6 rounded-full hover:scale-125 transition-all"

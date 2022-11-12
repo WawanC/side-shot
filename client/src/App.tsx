@@ -104,6 +104,8 @@ const App = () => {
     setMiddleCards([]);
     setTurn(1);
     setGameState("PLAYING");
+    setContestCount(0);
+    setContestHolder(1);
     // Shuffle and distribute cards
   }, []);
   // StartGame Method

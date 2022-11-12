@@ -108,7 +108,7 @@ const App = () => {
 
   // Opponent Move
   useEffect(() => {
-    if (turn === "OPPONENT") {
+    if (turn === "OPPONENT" && gameState === "PLAYING") {
       opponent.move(middleCards).then((cards) => {
         setMiddleCards(cards);
         setTurn("PLAYER");
@@ -205,7 +205,7 @@ const App = () => {
               card={card}
               key={`${card.rank}-${card.suit}`}
               className={`-m-4 shadow-sm shadow-black`}
-              folded
+              folded={gameState !== "PLAYER_WIN"}
             />
           ))}
         </div>

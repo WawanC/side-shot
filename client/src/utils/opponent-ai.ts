@@ -17,7 +17,7 @@ export const getPairCombos = (cards: Card[], boards?: Card[]) => {
       temp.push(cards[i]);
       continue;
     }
-    if (filteredCards.length > 1) {
+    if (filteredCards.length > 1 && !boards) {
       combinations.push(filteredCards);
       temp.push(cards[i]);
     }

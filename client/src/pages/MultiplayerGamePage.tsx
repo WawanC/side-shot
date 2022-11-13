@@ -18,6 +18,7 @@ interface GameStatus {
     cardsCount: number;
   }[];
   turn: string;
+  board: Card[];
 }
 
 interface Opponent {
@@ -32,7 +33,6 @@ const MultiplayerGamePage = () => {
   const [username, setUsername] = useState<string>();
   const [opponent, setOpponent] = useState<Opponent>();
   const [canSet, setCanSet] = useState<boolean>(false);
-  const [boardCards, setBoardCards] = useState<Card[]>([]);
 
   useEffect(() => {
     socket.emit("get-cards");
@@ -50,7 +50,7 @@ const MultiplayerGamePage = () => {
 
       if (!data || !opponentData) return;
 
-      setUsername(data.username);
+      if (!username) setUsername(data.username);
       setGameStatus(gameStatus);
       setOpponent({
         id: opponentData.id,
@@ -63,6 +63,8 @@ const MultiplayerGamePage = () => {
   //   Check player cards validity
   useEffect(() => {
     setCanSet(false);
+    if (!gameStatus) return;
+    const boardCards = gameStatus.board;
     // console.log("Checking player can");
     // Empty Board
     if (
@@ -121,7 +123,29 @@ const MultiplayerGamePage = () => {
     }
   }, [player.selectedCards]);
 
+  // Get turn name
+  const turnName = useMemo(() => {
+    const player = gameStatus?.players.find(
+      (player) => player.id === gameStatus.turn
+    );
+    if (player) return player.username;
+  }, [gameStatus]);
+
+  // Get is player turn now
   const isTurn = useMemo(() => gameStatus?.turn === socket.id, [gameStatus]);
+
+  // Player Set Middle Cards
+  const setCards = () => {
+    if (player.selectedCards.length <= 0 || !isTurn) return;
+
+    socket.emit("set-board", player.selectedCards);
+
+    player.setCards((cards) =>
+      cards.filter((card) => !player.selectedCards.includes(card))
+    );
+    player.setSelectedCards([]);
+  };
+  // Player Set Middle Cards
 
   return (
     <main
@@ -143,6 +167,21 @@ const MultiplayerGamePage = () => {
         </ul>
       </div>
 
+      {/* Board Area */}
+      <div className="flex flex-col items-center gap-8">
+        <ul className="flex justify-center">
+          {gameStatus &&
+            gameStatus.board.map((card) => (
+              <CardItem
+                key={`board-${card.rank}-${card.suit}`}
+                className="-m-4 shadow-sm shadow-black"
+                card={card}
+              />
+            ))}
+        </ul>
+        <span className="text-2xl">{turnName} Turn</span>
+      </div>
+
       {/* Player Area */}
       <div className="flex flex-col items-center gap-8">
         <div className="flex gap-4">
@@ -150,6 +189,7 @@ const MultiplayerGamePage = () => {
             className={`bg-pink-500 py-2 px-4 rounded-full font-bold 
           hover:scale-125 transition-all disabled:bg-gray-500 disabled:hover:scale-100`}
             disabled={!isTurn || !canSet}
+            onClick={setCards}
           >
             Set
           </button>

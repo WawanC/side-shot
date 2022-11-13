@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import Card from "./interfaces/card";
 import Game from "./interfaces/game";
 import GameStatus from "./interfaces/game-status";
 import LobbyPlayer from "./interfaces/lobby-player";
@@ -18,7 +19,8 @@ const getCurrentGameStatus = (): GameStatus | null => {
       username: player.username,
       cardsCount: player.cards.length
     })),
-    turn: game.turn
+    turn: game.turn,
+    board: game.board
   };
 };
 
@@ -55,7 +57,8 @@ io.on("connection", (socket) => {
           username: player.username,
           cards: []
         })),
-        turn: lobbyPlayers[0].id
+        turn: lobbyPlayers[0].id,
+        board: []
       };
 
       const shuffledDeck = shuffleCards(cardsData);
@@ -91,6 +94,23 @@ io.on("connection", (socket) => {
     const currentGameStatus = getCurrentGameStatus();
     if (!currentGameStatus) return null;
     socket.emit("game-status", currentGameStatus);
+  });
+
+  socket.on("set-board", (cards: Card[]) => {
+    if (!game) return;
+    game.board = cards;
+
+    const idx = lobbyPlayers.findIndex((player) => player.id === game?.turn);
+    if (idx === lobbyPlayers.length - 1) {
+      game.turn = lobbyPlayers[0].id;
+    } else {
+      game.turn = lobbyPlayers[idx + 1].id;
+    }
+
+    const currentGameStatus = getCurrentGameStatus();
+    if (!currentGameStatus) return null;
+
+    io.to("lobby").emit("game-status", currentGameStatus);
   });
 });
 

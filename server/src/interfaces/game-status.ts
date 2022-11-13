@@ -1,3 +1,5 @@
+import Card from "./card";
+
 export default interface GameStatus {
   players: {
     id: string;
@@ -5,4 +7,5 @@ export default interface GameStatus {
     cardsCount: number;
   }[];
   turn: string;
+  board: Card[];
 }

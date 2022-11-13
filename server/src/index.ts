@@ -161,4 +161,4 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(process.env.port || 8000);
+httpServer.listen(process.env.PORT || 8000);

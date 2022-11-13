@@ -1,9 +1,25 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import Player from "./interfaces/player";
+import Game from "./interfaces/game";
+import GameStatus from "./interfaces/game-status";
+import LobbyPlayer from "./interfaces/lobby-player";
+import { shuffleCards } from "./utils/card";
+import cardsData from "./utils/card-data";
 
-let players: Player[] = [];
+let lobbyPlayers: LobbyPlayer[] = [];
+let game: Game | null = null;
+
+const getCurrentGameStatus = (): GameStatus | null => {
+  if (!game) return null;
+  return {
+    players: game.players.map((player) => ({
+      id: player.id,
+      username: player.username,
+      cardsCount: player.cards.length
+    }))
+  };
+};
 
 const app = express();
 const httpServer = createServer(app);
@@ -11,35 +27,68 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 io.on("connection", (socket) => {
   socket.on("get-players", (arg) => {
-    socket.emit("players", players);
+    socket.emit("players", lobbyPlayers);
   });
 
   socket.on("join-lobby", (username: string) => {
-    players.push({ id: socket.id, username: username, isReady: false });
+    lobbyPlayers.push({ id: socket.id, username: username, isReady: false });
     socket.join("lobby");
-    io.emit("players", players);
+    io.emit("players", lobbyPlayers);
   });
 
   socket.on("toggle-ready-lobby", (arg) => {
-    const playerIdx = players.findIndex((player) => player.id === socket.id);
+    const playerIdx = lobbyPlayers.findIndex(
+      (player) => player.id === socket.id
+    );
     if (playerIdx < 0) return;
-    players[playerIdx].isReady = !players[playerIdx].isReady;
-    io.emit("players", players);
+    lobbyPlayers[playerIdx].isReady = !lobbyPlayers[playerIdx].isReady;
+    io.emit("players", lobbyPlayers);
 
-    const isAllReady = players.every((player) => player.isReady === true);
-    if (isAllReady) {
+    const isAllReady = lobbyPlayers.every((player) => player.isReady === true);
+    if (isAllReady && lobbyPlayers.length === 2) {
       io.to("lobby").emit("start-game");
+
+      game = {
+        players: lobbyPlayers.map((player) => ({
+          id: player.id,
+          username: player.username,
+          cards: []
+        }))
+      };
+
+      const shuffledDeck = shuffleCards(cardsData);
+
+      game.players.forEach((player) => {
+        for (let i = 0; i < 13; i++) {
+          const card = shuffledDeck.pop();
+          if (card) player.cards.push(card);
+        }
+      });
+
+      console.log(`Game : ${game}`);
     }
   });
 
   socket.on("leave-lobby", () => {
-    players = players.filter((player) => player.id !== socket.id);
-    io.emit("players", players);
+    lobbyPlayers = lobbyPlayers.filter((player) => player.id !== socket.id);
+    io.emit("players", lobbyPlayers);
   });
 
   socket.on("disconnect", (reason) => {
-    players = players.filter((player) => player.id !== socket.id);
-    io.emit("players", players);
+    lobbyPlayers = lobbyPlayers.filter((player) => player.id !== socket.id);
+    io.emit("players", lobbyPlayers);
+  });
+
+  socket.on("get-cards", (arg) => {
+    if (!socket.rooms.has("lobby") || !game) return;
+
+    const player = game.players.find((player) => player.id === socket.id);
+    if (!player) return;
+    socket.emit("cards", player.cards);
+
+    const currentGameStatus = getCurrentGameStatus();
+    if (!currentGameStatus) return null;
+    socket.emit("game-status", currentGameStatus);
   });
 });
 

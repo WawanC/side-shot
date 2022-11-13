@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Player from "../interfaces/player";
 import socket from "../utils/socket";
 
@@ -6,6 +7,7 @@ const LobbyPage = () => {
   const [playerList, setPlayerList] = useState<Player[]>([]);
   const [name, setName] = useState<string>("");
   const [isStarting, setIsStarting] = useState<boolean>(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     socket.emit("get-players");
@@ -18,7 +20,7 @@ const LobbyPage = () => {
     socket.on("start-game", (arg) => {
       setIsStarting(true);
       setTimeout(() => {
-        setIsStarting(false);
+        navigate("/multiplayer-game");
       }, 3000);
     });
   }, []);

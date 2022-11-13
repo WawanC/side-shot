@@ -7,6 +7,9 @@ import GameStatus from "./interfaces/game-status";
 import LobbyPlayer from "./interfaces/lobby-player";
 import { shuffleCards } from "./utils/card";
 import cardsData from "./utils/card-data";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 let lobbyPlayers: LobbyPlayer[] = [];
 let game: Game | null = null;
@@ -158,4 +161,4 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(8000);
+httpServer.listen(process.env.port || 8000);

@@ -69,8 +69,6 @@ io.on("connection", (socket) => {
           if (card) player.cards.push(card);
         }
       });
-
-      console.log(`Game : ${game}`);
     }
   });
 
@@ -100,10 +98,12 @@ io.on("connection", (socket) => {
     if (!game) return;
     game.board = cards;
 
+    // Find player that set the cards
     const playerIdx = lobbyPlayers.findIndex(
       (player) => player.id === socket.id
     );
 
+    // Remove cards from player hands
     game.players[playerIdx].cards = game.players[playerIdx].cards.filter(
       (c) => {
         const isExist = cards.find(
@@ -114,8 +114,7 @@ io.on("connection", (socket) => {
       }
     );
 
-    console.log(game.players[playerIdx].cards);
-
+    // Increment turn to next turn
     if (playerIdx === lobbyPlayers.length - 1) {
       game.turn = lobbyPlayers[0].id;
     } else {
@@ -125,7 +124,17 @@ io.on("connection", (socket) => {
     const currentGameStatus = getCurrentGameStatus();
     if (!currentGameStatus) return null;
 
+    // Emit the updated game status
     io.to("lobby").emit("game-status", currentGameStatus);
+
+    // Check if the player cards is empty and game done
+    if (game.players[playerIdx].cards.length <= 0) {
+      io.to("lobby").emit("game-over", game.players[playerIdx].id);
+      io.socketsLeave("lobby");
+      lobbyPlayers = [];
+      io.emit("players", lobbyPlayers);
+      return;
+    }
   });
 
   socket.on("pass-turn", (arg) => {

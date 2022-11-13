@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CardItem from "../components/CardItem";
 import usePlayer from "../hooks/usePlayer";
 import Card from "../interfaces/card";
@@ -33,6 +34,8 @@ const MultiplayerGamePage = () => {
   const [username, setUsername] = useState<string>();
   const [opponent, setOpponent] = useState<Opponent>();
   const [canSet, setCanSet] = useState<boolean>(false);
+  const [winner, setWinner] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     socket.emit("get-cards");
@@ -57,6 +60,14 @@ const MultiplayerGamePage = () => {
         username: opponentData.username,
         cardsCount: opponentData.cardsCount
       });
+    });
+
+    socket.on("game-over", (winnerId: string) => {
+      setWinner(winnerId);
+
+      setTimeout(() => {
+        navigate("/lobby");
+      }, 3000);
     });
   }, []);
 
@@ -132,7 +143,18 @@ const MultiplayerGamePage = () => {
   }, [gameStatus]);
 
   // Get is player turn now
-  const isTurn = useMemo(() => gameStatus?.turn === socket.id, [gameStatus]);
+  const isTurn = useMemo(
+    () => gameStatus?.turn === socket.id && !winner,
+    [gameStatus]
+  );
+
+  // Get winner username
+  const getWinner = useMemo(() => {
+    if (!gameStatus || !winner) return;
+    const player = gameStatus.players.find((p) => p.id === winner);
+    if (!player) return;
+    return player.username;
+  }, [winner]);
 
   // Player Set Middle Cards
   const setCards = () => {
@@ -174,19 +196,25 @@ const MultiplayerGamePage = () => {
       </div>
 
       {/* Board Area */}
-      <div className="flex flex-col items-center gap-8">
-        <ul className="flex justify-center">
-          {gameStatus &&
-            gameStatus.board.map((card) => (
-              <CardItem
-                key={`board-${card.rank}-${card.suit}`}
-                className="-m-4 shadow-sm shadow-black"
-                card={card}
-              />
-            ))}
-        </ul>
-        <span className="text-2xl">{turnName} Turn</span>
-      </div>
+      {!winner ? (
+        <div className="flex flex-col items-center gap-8">
+          <ul className="flex justify-center">
+            {gameStatus &&
+              gameStatus.board.map((card) => (
+                <CardItem
+                  key={`board-${card.rank}-${card.suit}`}
+                  className="-m-4 shadow-sm shadow-black"
+                  card={card}
+                />
+              ))}
+          </ul>
+          <span className="text-2xl">{turnName} Turn</span>
+        </div>
+      ) : (
+        <div className="flex justify-center items-center">
+          <span className="text-4xl font-bold">{getWinner} Win !</span>
+        </div>
+      )}
 
       {/* Player Area */}
       <div className="flex flex-col items-center gap-8">

@@ -15,12 +15,29 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join-lobby", (username: string) => {
-    players.push({ id: socket.id, username: username });
+    players.push({ id: socket.id, username: username, isReady: false });
     socket.join("lobby");
     io.emit("players", players);
   });
 
+  socket.on("toggle-ready-lobby", (arg) => {
+    const playerIdx = players.findIndex((player) => player.id === socket.id);
+    if (playerIdx < 0) return;
+    players[playerIdx].isReady = !players[playerIdx].isReady;
+    io.emit("players", players);
+
+    const isAllReady = players.every((player) => player.isReady === true);
+    if (isAllReady) {
+      io.to("lobby").emit("start-game");
+    }
+  });
+
   socket.on("leave-lobby", () => {
+    players = players.filter((player) => player.id !== socket.id);
+    io.emit("players", players);
+  });
+
+  socket.on("disconnect", (reason) => {
     players = players.filter((player) => player.id !== socket.id);
     io.emit("players", players);
   });

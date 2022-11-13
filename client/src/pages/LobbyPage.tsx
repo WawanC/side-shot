@@ -5,6 +5,7 @@ import socket from "../utils/socket";
 const LobbyPage = () => {
   const [playerList, setPlayerList] = useState<Player[]>([]);
   const [name, setName] = useState<string>("");
+  const [isStarting, setIsStarting] = useState<boolean>(false);
 
   useEffect(() => {
     socket.emit("get-players");
@@ -12,6 +13,13 @@ const LobbyPage = () => {
     socket.on("players", (players: Player[]) => {
       console.log(players);
       setPlayerList(players);
+    });
+
+    socket.on("start-game", (arg) => {
+      setIsStarting(true);
+      setTimeout(() => {
+        setIsStarting(false);
+      }, 3000);
     });
   }, []);
 
@@ -21,6 +29,12 @@ const LobbyPage = () => {
   );
 
   const isLobbyFull = useMemo(() => playerList.length >= 4, [playerList]);
+
+  const isPlayerReady = useMemo(() => {
+    const player = playerList.find((player) => player.id === socket.id);
+    if (!player) return false;
+    return player.isReady;
+  }, [playerList]);
 
   const joinHandler = () => {
     if (name.length <= 0) return;
@@ -33,6 +47,22 @@ const LobbyPage = () => {
     socket.emit("leave-lobby");
   };
 
+  const toggleReadyHandler = () => {
+    if (!alreadyJoin) return;
+    socket.emit("toggle-ready-lobby");
+  };
+
+  if (isStarting) {
+    return (
+      <main
+        className="w-screen h-screen bg-pink-200
+    flex justify-center items-center"
+      >
+        <p className="text-4xl font-bold">Game is starting...</p>
+      </main>
+    );
+  }
+
   return (
     <main
       className="w-screen h-screen bg-pink-200
@@ -41,19 +71,38 @@ const LobbyPage = () => {
       <h1 className="text-6xl font-bold underline">Lobby</h1>
       <ul className="text-4xl font-bold flex flex-col items-center gap-4 list-disc">
         {playerList.length > 0 ? (
-          playerList.map((player) => <li key={player.id}>{player.username}</li>)
+          playerList.map((player) => (
+            <li
+              key={player.id}
+              className={`${player.isReady && "text-green-500"}`}
+            >
+              {player.username}
+            </li>
+          ))
         ) : (
           <p>No player yet...</p>
         )}
       </ul>
       {alreadyJoin ? (
-        <button
-          className={`py-4 px-8 rounded-full 
+        <div className="flex gap-4">
+          <button
+            className={`py-4 px-8 rounded-full 
+        font-bold text-4xl hover:bg-white ${
+          isPlayerReady ? "bg-red-200" : "bg-green-500"
+        }`}
+            onClick={toggleReadyHandler}
+          >
+            {isPlayerReady ? "Cancel" : "Ready"}
+          </button>
+
+          <button
+            className={`py-4 px-8 rounded-full 
         font-bold text-4xl bg-red-500 hover:bg-white`}
-          onClick={leaveHandler}
-        >
-          Leave
-        </button>
+            onClick={leaveHandler}
+          >
+            Leave
+          </button>
+        </div>
       ) : isLobbyFull ? (
         <p className="text-4xl">Lobby already full</p>
       ) : (

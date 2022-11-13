@@ -17,7 +17,8 @@ const getCurrentGameStatus = (): GameStatus | null => {
       id: player.id,
       username: player.username,
       cardsCount: player.cards.length
-    }))
+    })),
+    turn: game.turn
   };
 };
 
@@ -53,7 +54,8 @@ io.on("connection", (socket) => {
           id: player.id,
           username: player.username,
           cards: []
-        }))
+        })),
+        turn: lobbyPlayers[0].id
       };
 
       const shuffledDeck = shuffleCards(cardsData);

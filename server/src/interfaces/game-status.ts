@@ -4,4 +4,5 @@ export default interface GameStatus {
     username: string;
     cardsCount: number;
   }[];
+  turn: string;
 }

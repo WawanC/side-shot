@@ -100,11 +100,26 @@ io.on("connection", (socket) => {
     if (!game) return;
     game.board = cards;
 
-    const idx = lobbyPlayers.findIndex((player) => player.id === game?.turn);
-    if (idx === lobbyPlayers.length - 1) {
+    const playerIdx = lobbyPlayers.findIndex(
+      (player) => player.id === socket.id
+    );
+
+    game.players[playerIdx].cards = game.players[playerIdx].cards.filter(
+      (c) => {
+        const isExist = cards.find(
+          (cc) => cc.rank === c.rank && cc.suit === c.suit
+        );
+        if (isExist) return false;
+        return true;
+      }
+    );
+
+    console.log(game.players[playerIdx].cards);
+
+    if (playerIdx === lobbyPlayers.length - 1) {
       game.turn = lobbyPlayers[0].id;
     } else {
-      game.turn = lobbyPlayers[idx + 1].id;
+      game.turn = lobbyPlayers[playerIdx + 1].id;
     }
 
     const currentGameStatus = getCurrentGameStatus();
@@ -118,11 +133,13 @@ io.on("connection", (socket) => {
 
     game.board = [];
 
-    const idx = lobbyPlayers.findIndex((player) => player.id === game?.turn);
-    if (idx === lobbyPlayers.length - 1) {
+    const turnIdx = lobbyPlayers.findIndex(
+      (player) => player.id === game?.turn
+    );
+    if (turnIdx === lobbyPlayers.length - 1) {
       game.turn = lobbyPlayers[0].id;
     } else {
-      game.turn = lobbyPlayers[idx + 1].id;
+      game.turn = lobbyPlayers[turnIdx + 1].id;
     }
 
     const currentGameStatus = getCurrentGameStatus();

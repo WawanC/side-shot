@@ -112,6 +112,24 @@ io.on("connection", (socket) => {
 
     io.to("lobby").emit("game-status", currentGameStatus);
   });
+
+  socket.on("pass-turn", (arg) => {
+    if (!game) return;
+
+    game.board = [];
+
+    const idx = lobbyPlayers.findIndex((player) => player.id === game?.turn);
+    if (idx === lobbyPlayers.length - 1) {
+      game.turn = lobbyPlayers[0].id;
+    } else {
+      game.turn = lobbyPlayers[idx + 1].id;
+    }
+
+    const currentGameStatus = getCurrentGameStatus();
+    if (!currentGameStatus) return null;
+
+    io.to("lobby").emit("game-status", currentGameStatus);
+  });
 });
 
 httpServer.listen(8000);

@@ -145,7 +145,13 @@ const MultiplayerGamePage = () => {
     );
     player.setSelectedCards([]);
   };
-  // Player Set Middle Cards
+
+  // Player pass
+  const passTurn = () => {
+    socket.emit("pass-turn");
+    // setMiddleCards([]);
+    player.setSelectedCards([]);
+  };
 
   return (
     <main
@@ -197,6 +203,7 @@ const MultiplayerGamePage = () => {
             className={`bg-pink-500 py-2 px-4 rounded-full font-bold 
           hover:scale-125 transition-all disabled:bg-gray-500 disabled:hover:scale-100`}
             disabled={!isTurn}
+            onClick={passTurn}
           >
             Pass
           </button>

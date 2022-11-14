@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useSound from "use-sound";
 import Player from "../interfaces/player";
 import socket from "../utils/socket";
 
@@ -8,12 +9,15 @@ const LobbyPage = () => {
   const [name, setName] = useState<string>("");
   const [isStarting, setIsStarting] = useState<boolean>(false);
   const navigate = useNavigate();
+  const [playBellSound] = useSound("/sounds/bell.wav", {
+    playbackRate: 2.5,
+    volume: 0.1
+  });
 
   useEffect(() => {
     socket.emit("get-players");
 
     socket.on("players", (players: Player[]) => {
-      console.log(players);
       setPlayerList(players);
     });
 
@@ -24,6 +28,12 @@ const LobbyPage = () => {
       }, 3000);
     });
   }, []);
+
+  useEffect(() => {
+    if (playerList.length > 0) {
+      playBellSound();
+    }
+  }, [playerList]);
 
   const alreadyJoin = useMemo(
     () => !!playerList.find((player) => player.id === socket.id),

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useSound from "use-sound";
 import CardItem from "../components/CardItem";
 import usePlayer from "../hooks/usePlayer";
 import Card from "../interfaces/card";
@@ -37,6 +38,19 @@ const MultiplayerGamePage = () => {
   const [winner, setWinner] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const [playClapsSound] = useSound("/sounds/claps.wav", {
+    volume: 1.5
+  });
+
+  const [playSetCardSound] = useSound("/sounds/flip-card.mp3", {
+    playbackRate: 2
+  });
+
+  const [playPassTurnSound] = useSound("/sounds/pass-turn.mp3", {
+    playbackRate: 2,
+    volume: 0.25
+  });
+
   useEffect(() => {
     socket.emit("get-cards");
 
@@ -45,7 +59,6 @@ const MultiplayerGamePage = () => {
     });
 
     socket.on("game-status", (gameStatus: GameStatus) => {
-      console.log(gameStatus);
       const data = gameStatus.players.find((player) => player.id === socket.id);
       const opponentData = gameStatus.players.find(
         (player) => player.id !== socket.id
@@ -70,6 +83,16 @@ const MultiplayerGamePage = () => {
       }, 3000);
     });
   }, []);
+
+  // Play card sound effect
+  useEffect(() => {
+    if (!gameStatus) return;
+    if (gameStatus.board.length > 0) {
+      playSetCardSound();
+    } else {
+      playPassTurnSound();
+    }
+  }, [gameStatus]);
 
   //   Check player cards validity
   useEffect(() => {
@@ -153,6 +176,7 @@ const MultiplayerGamePage = () => {
     if (!gameStatus || !winner) return;
     const player = gameStatus.players.find((p) => p.id === winner);
     if (!player) return;
+    playClapsSound();
     return player.username;
   }, [winner]);
 
@@ -196,25 +220,22 @@ const MultiplayerGamePage = () => {
       </div>
 
       {/* Board Area */}
-      {!winner ? (
-        <div className="flex flex-col items-center gap-8">
-          <ul className="flex justify-center">
-            {gameStatus &&
-              gameStatus.board.map((card) => (
-                <CardItem
-                  key={`board-${card.rank}-${card.suit}`}
-                  className="-m-4 shadow-sm shadow-black"
-                  card={card}
-                />
-              ))}
-          </ul>
-          <span className="text-2xl">{turnName} Turn</span>
-        </div>
-      ) : (
-        <div className="flex justify-center items-center">
-          <span className="text-4xl font-bold">{getWinner} Win !</span>
-        </div>
-      )}
+
+      <div className="flex flex-col items-center gap-8">
+        <ul className="flex justify-center">
+          {gameStatus &&
+            gameStatus.board.map((card) => (
+              <CardItem
+                key={`board-${card.rank}-${card.suit}`}
+                className="-m-4 shadow-sm shadow-black"
+                card={card}
+              />
+            ))}
+        </ul>
+        <span className="text-2xl">
+          {winner ? `${getWinner} Win !` : `${turnName} Turn`}
+        </span>
+      </div>
 
       {/* Player Area */}
       <div className="flex flex-col items-center gap-8">

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import useSound from "use-sound";
 import CardItem from "../components/CardItem";
 import useOpponent from "../hooks/useOpponent";
 import usePlayer from "../hooks/usePlayer";
@@ -37,6 +38,15 @@ const GamePage = () => {
   const [canSet, setCanSet] = useState<boolean>(false);
   const [contestCount, setContestCount] = useState<number>(0);
   const [contestHolder, setContestHolder] = useState<number | null>(null);
+
+  const [playFlipCardSound] = useSound("/sounds/flip-card.mp3", {
+    playbackRate: 2
+  });
+
+  const [playPassTurnSound] = useSound("/sounds/pass-turn.mp3", {
+    playbackRate: 2,
+    volume: 0.25
+  });
 
   const nextTurn = () => {
     if (turn === 4) {
@@ -111,6 +121,7 @@ const GamePage = () => {
 
   const passTurn = () => {
     // setMiddleCards([]);
+    playPassTurnSound();
     player.setSelectedCards([]);
     setContestCount((count) => count + 1);
     nextTurn();
@@ -143,6 +154,7 @@ const GamePage = () => {
 
       if (selectedCards.length === 0) {
         setContestCount((count) => count + 1);
+        playPassTurnSound();
       } else {
         setContestHolder(turn);
         setContestCount(0);
@@ -237,6 +249,12 @@ const GamePage = () => {
       }
     }
   }, [player.selectedCards]);
+
+  useEffect(() => {
+    if (middleCards.length > 0) {
+      playFlipCardSound();
+    }
+  }, [middleCards]);
 
   return (
     <main className="flex flex-col items-center h-screen">
